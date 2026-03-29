@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Affiche Festival Ouaga - Interactif</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #1a1a1a; /* Fond sombre pour le contraste */
+            color: white;
+        }
+
+        /* --- CONTENEUR PRINCIPAL SIMULANT L'AFFICHE HAUTE RÉSOLUTION --- */
+        
+        .poster-container {
+            width: 375px; /* Largeur de l'affiche */
+            height: 667px; /* Hauteur smartphone */
+            position: relative;
+            /* L'IMAGE COMPLETE DE FOND (image_21.png) EST ENCODÉE DIRECTEMENT ICI */
+            background-image: url('data:image/jpeg;base64,...(Collez ici le très long code Base64 de l'image de fond source image_21.png)...');
+            background-size: cover;
+            background-position: center;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden; /* Pour le bouton */
+        }
+
+        /* --- LE CADRE PHOTO INTERACTIF ORNEMENTÉ --- */
+        
+        .photo-frame-wrapper {
+            width: 250px;
+            height: 250px;
+            position: absolute;
+            top: 260px; /* Positionnement précis comme sur l'original */
+            cursor: pointer;
+            z-index: 2; /* Devant le fond */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* L'ORNEMENTATION DORÉE EST ENCODÉE DIRECTEMENT ICI AUSSI */
+        .ornamentation {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; /* Ne gêne pas le clic */
+            background-image: url('data:image/png;base64,...(code encodé de ornementation_cadre.png)...');
+            background-size: cover;
+            opacity: 0.9;
+        }
+
+        /* Cadre intérieur transparent pour la photo */
+        .inner-frame {
+            position: absolute;
+            top: 25px; left: 25px;
+            width: 200px; height: 200px;
+            border-radius: 8px;
+            overflow: hidden; /* Pour couper la photo */
+            background-color: rgba(255, 255, 255, 0.2); /* Très transparent pour voir le placeholder */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* La photo de l'utilisateur */
+        .inner-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none; /* Cachée au départ */
+        }
+
+        /* Texte du placeholder élégant */
+        .placeholder-text {
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            font-size: 16px;
+            z-index: 1; /* Par-dessus le fond mais sous l'ornement */
+        }
+
+        /* --- LE BOUTON D'ENREGISTREMENT STYLISÉ ET INTÉGRÉ --- */
+        
+        #btnSave {
+            position: absolute;
+            bottom: 20px;
+            background-color: #2e7d32; /* Vert */
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            z-index: 3; /* Par-dessus tout */
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="poster-container" id="poster">
+        <div class="photo-frame-wrapper" id="photoFrame">
+            <div class="ornamentation"></div>
+            
+            <div class="inner-frame">
+                <img src="" alt="Photo utilisateur" id="userPhoto">
+                <span class="placeholder-text">Collez votre photo ici</span>
+            </div>
+        </div>
+
+        <button id="btnSave">Enregistrer mon affiche</button>
+    </div>
+
+    <input type="file" id="photoInput" accept="image/*" style="display: none;">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+        const photoFrame = document.getElementById('photoFrame');
+        const photoInput = document.getElementById('photoInput');
+        const userPhoto = document.getElementById('userPhoto');
+        const placeholderText = document.querySelector('.placeholder-text');
+        const btnSave = document.getElementById('btnSave');
+
+        // Ouvrir la galerie au clic sur le cadre ornementé
+        photoFrame.addEventListener('click', () => {
+            photoInput.click();
+        });
+
+        // Charger la photo sélectionnée
+        photoInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    userPhoto.src = e.target.result;
+                    userPhoto.style.display = 'block';
+                    placeholderText.style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Enregistrer l'affiche finale personnalisée
+        btnSave.addEventListener('click', () => {
+            const poster = document.getElementById('poster');
+            // Attend que la photo soit chargée avant de capturer
+            if (userPhoto.style.display === 'block' && userPhoto.complete === false) {
+                 userPhoto.onload = function() { captureAndDownload(); };
+            } else {
+                 captureAndDownload();
+            }
+        });
+
+        function captureAndDownload() {
+            html2canvas(poster).then(canvas => {
+                const imageData = canvas.toDataURL("image/png");
+                const link = document.createElement('a');
+                link.href = imageData;
+                link.download = 'mon_affiche_ouaga.png';
+                link.click();
+            });
+        }
+    </script>
+
+</body>
+  </html>
+  

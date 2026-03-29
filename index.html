@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Festival Jeunesse OUAGA – Éditeur Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0a0f1c;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: sans-serif;
+            padding: 15px;
+        }
+
+        .card {
+            max-width: 480px;
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border-radius: 2rem;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .poster {
+            position: relative;
+            width: 100%;
+            border-radius: 1.2rem;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+        }
+
+        .poster-bg {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        /* --- ZONE PHOTO : POSITIONNÉE POUR NE PAS CACHER LE TEXTE DE L'IMAGE --- */
+        .photo-slot {
+            position: absolute;
+            top: 41.8%; /* Ajusté pour descendre sous le "J'y serai !" de l'affiche */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 38%; /* Taille réduite pour un rendu élégant */
+            aspect-ratio: 1 / 1;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 18px;
+            box-shadow: 0 0 0 3px #FFD966; /* Le cadre doré */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            z-index: 5;
+        }
+
+        .user-photo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .placeholder-text {
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #333;
+            text-transform: uppercase;
+        }
+
+        /* --- BOUTON ENREGISTRER --- */
+        .save-btn {
+            background: linear-gradient(135deg, #FBBF24, #D97706);
+            border: none;
+            color: #000;
+            padding: 15px;
+            width: 100%;
+            border-radius: 50px;
+            font-weight: 900;
+            margin-top: 20px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* --- MODAL DE RECADRAGE (L'aspect Pro) --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 100;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-box {
+            background: #1e1e1e;
+            width: 90%;
+            max-width: 400px;
+            padding: 20px;
+            border-radius: 1.5rem;
+            color: #fff;
+        }
+
+        #crop-area { width: 100%; height: 300px; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-group button {
+            flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: bold;
+        }
+        .btn-cancel { background: #444; color: #fff; }
+        .btn-confirm { background: #FBBF24; color: #000; }
+
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="poster" id="captureZone">
+        <img src="background_festival.jpg" class="poster-bg" id="bgImg">
+        
+        <div class="photo-slot" id="openUpload">
+            <span id="txtEmpty" class="placeholder-text">📷 PHOTO</span>
+            <img id="finalImg" class="user-photo">
+        </div>
+    </div>
+
+    <button class="save-btn" id="btnSave">⬇️ TÉLÉCHARGER MON AFFICHE</button>
+</div>
+
+<div class="modal" id="modalCrop">
+    <div class="modal-box">
+        <h4 style="margin-bottom:10px">Ajustez votre photo</h4>
+        <div id="crop-area"></div>
+        <div class="btn-group">
+            <button class="btn-cancel" id="btnCancel">Annuler</button>
+            <button class="btn-confirm" id="btnOk">Valider</button>
+        </div>
+    </div>
+</div>
+
+<input type="file" id="inputFile" accept="image/*">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<script>
+    const inputFile = document.getElementById('inputFile');
+    const openUpload = document.getElementById('openUpload');
+    const modal = document.getElementById('modalCrop');
+    const cropArea = document.getElementById('crop-area');
+    const finalImg = document.getElementById('finalImg');
+    const txtEmpty = document.getElementById('txtEmpty');
+    let cropper = null;
+
+    // 1. Clic sur le cadre pour choisir une photo
+    openUpload.onclick = () => inputFile.click();
+
+    // 2. Charger la photo dans l'outil de recadrage
+    inputFile.onchange = function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                modal.style.display = 'flex';
+                if(cropper) cropper.destroy();
+                cropper = new Croppie(cropArea, {
+                    viewport: { width: 200, height: 200, type: 'square' },
+                    boundary: { width: 280, height: 280 },
+                    showZoomer: true
+                });
+                cropper.bind({ url: event.target.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // 3. Annuler ou Valider le recadrage
+    document.getElementById('btnCancel').onclick = () => modal.style.display = 'none';
+    
+    document.getElementById('btnOk').onclick = () => {
+        cropper.result({ type: 'base64', size: 'viewport' }).then(res => {
+            finalImg.src = res;
+            finalImg.style.display = 'block';
+            txtEmpty.style.display = 'none';
+            modal.style.display = 'none';
+        });
+    };
+
+    // 4. Enregistrer l'affiche finale
+    document.getElementById('btnSave').onclick = () => {
+        const btn = document.getElementById('btnSave');
+        btn.innerText = "GÉNÉRATION...";
+        html2canvas(document.getElementById('captureZone'), { scale: 3 }).then(canvas => {
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = 'mon_affiche_festival.png';
+            link.click();
+            btn.innerText = "⬇️ TÉLÉCHARGER MON AFFICHE";
+        });
+    };
+</script>
+
+</body>
+          </html>
+          

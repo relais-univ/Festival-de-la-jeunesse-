@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Festival Jeunesse OUAGA – Éditeur Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0a0f1c;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: sans-serif;
+            padding: 15px;
+        }
+
+        .card {
+            max-width: 480px;
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border-radius: 2rem;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .poster {
+            position: relative;
+            width: 100%;
+            border-radius: 1.2rem;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+        }
+
+        .poster-bg {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        /* --- ZONE PHOTO CORRIGÉE --- */
+        .photo-slot {
+            position: absolute;
+            top: 41.8%; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 38%; 
+            aspect-ratio: 1 / 1;
+            background: #fff; /* Fond blanc si pas de photo */
+            border-radius: 12px; /* Un peu moins arrondi pour remplir les coins */
+            box-shadow: 0 0 0 4px #FFD966; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden; /* Important : coupe ce qui dépasse */
+            z-index: 5;
+        }
+
+        /* L'image doit ENVAHIR tout l'espace */
+        .user-photo {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important; /* Remplit tout sans déformer */
+            display: none;
+        }
+
+        .placeholder-text {
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #ccc;
+            text-transform: uppercase;
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, #FBBF24, #D97706);
+            border: none;
+            color: #000;
+            padding: 15px;
+            width: 100%;
+            border-radius: 50px;
+            font-weight: 900;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+
+        /* Modal Recadrage */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 100;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-box {
+            background: #1e1e1e;
+            width: 90%;
+            max-width: 400px;
+            padding: 20px;
+            border-radius: 1.5rem;
+            color: #fff;
+        }
+
+        #crop-area { width: 100%; height: 320px; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-group button {
+            flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: bold;
+        }
+        .btn-cancel { background: #444; color: #fff; }
+        .btn-confirm { background: #FBBF24; color: #000; }
+
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="poster" id="captureZone">
+        <img src="background_festival.jpg" class="poster-bg">
+        
+        <div class="photo-slot" id="openUpload">
+            <span id="txtEmpty" class="placeholder-text">CLIQUEZ ICI</span>
+            <img id="finalImg" class="user-photo">
+        </div>
+    </div>
+
+    <button class="save-btn" id="btnSave">⬇️ ENREGISTRER L'AFFICHE</button>
+</div>
+
+<div class="modal" id="modalCrop">
+    <div class="modal-box">
+        <h3 style="margin-bottom:15px">Ajustez votre photo</h3>
+        <div id="crop-area"></div>
+        <div class="btn-group">
+            <button id="btnCancel" class="btn-cancel">Annuler</button>
+            <button id="btnOk" class="btn-confirm">Valider le cadrage</button>
+        </div>
+    </div>
+</div>
+
+<input type="file" id="inputFile" accept="image/*">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<script>
+    const inputFile = document.getElementById('inputFile');
+    const openUpload = document.getElementById('openUpload');
+    const modal = document.getElementById('modalCrop');
+    const cropArea = document.getElementById('crop-area');
+    const finalImg = document.getElementById('finalImg');
+    const txtEmpty = document.getElementById('txtEmpty');
+    let cropper = null;
+
+    openUpload.onclick = () => inputFile.click();
+
+    inputFile.onchange = function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                modal.style.display = 'flex';
+                if(cropper) cropper.destroy();
+                cropper = new Croppie(cropArea, {
+                    viewport: { width: 250, height: 250, type: 'square' },
+                    boundary: { width: 300, height: 300 },
+                    showZoomer: true,
+                    enableOrientation: true
+                });
+                cropper.bind({ url: event.target.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    document.getElementById('btnCancel').onclick = () => modal.style.display = 'none';
+    
+    document.getElementById('btnOk').onclick = () => {
+        // On demande un résultat de haute qualité
+        cropper.result({ 
+            type: 'base64', 
+            size: { width: 600, height: 600 }, // Taille large pour que ce soit net
+            format: 'jpeg',
+            quality: 1
+        }).then(res => {
+            finalImg.src = res;
+            finalImg.style.display = 'block';
+            txtEmpty.style.display = 'none';
+            modal.style.display = 'none';
+        });
+    };
+
+    document.getElementById('btnSave').onclick = () => {
+        const btn = document.getElementById('btnSave');
+        btn.innerText = "PATIENTEZ...";
+        html2canvas(document.getElementById('captureZone'), { 
+            scale: 3,
+            useCORS: true,
+            allowTaint: true
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = 'mon_affiche_festival.png';
+            link.click();
+            btn.innerText = "⬇️ ENREGISTRER L'AFFICHE";
+        });
+    };
+</script>
+
+</body>
+  </html>
+  
